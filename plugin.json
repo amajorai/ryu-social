@@ -1,0 +1,19 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "ryu.social",
+  "version": "1.0.0",
+  "description": "A publishing command center for every social account you run: compose once, tailor per platform, queue it on a calendar, and let the node publish while you are away.",
+  "keywords": [
+    "social",
+    "scheduling",
+    "publishing",
+    "calendar",
+    "inbox"
+  ],
+  "extensions": {
+    "com.ryuhq.ryu": {
+      "id": "@ryu/social",
+      "displayName": "Outpost"
+    }
+  }
+}
