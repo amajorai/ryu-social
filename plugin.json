@@ -1,0 +1,25 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "ryu.social",
+  "version": "0.1.14",
+  "description": "A publishing command center for every social account you run: compose once, tailor per platform, queue it on a calendar, and let the node publish while you are away. Scheduled posts, a retrying publish queue, a unified reply inbox, engagement history, and reusable post templates — all in one local SQLite database the node owns.",
+  "author": {
+    "name": "Ryu",
+    "url": "https://ryuhq.com"
+  },
+  "homepage": "https://github.com/amajorai/ryu-social",
+  "repository": "https://github.com/amajorai/ryu-social",
+  "keywords": [
+    "social",
+    "scheduling",
+    "publishing",
+    "calendar",
+    "inbox"
+  ],
+  "extensions": {
+    "com.ryuhq.ryu": {
+      "id": "@ryu/social",
+      "displayName": "Outpost"
+    }
+  }
+}
