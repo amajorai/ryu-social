@@ -1,0 +1,80 @@
+[package]
+name = "ryu-social"
+# The version the publish train is on. `tools/publish-crates.sh` reads TRAIN_VERSION
+# from the FIRST crate in its list and requires every crate in the set to be on it,
+# so an apps-store backend that drifts to its own version silently breaks the
+# release. Every other `apps-store/*/backend` is on 0.1.9; so is this one.
+version = "0.2.2"
+edition = "2021"
+license = "Apache-2.0"
+description = "Outpost for Ryu: a social-media scheduling and publishing command center. Owns the whole spine out-of-process — workspaces, connected accounts behind a swappable platform-provider abstraction, drafts with ordered segments and per-platform limit validation, a scheduler tick that claims due posts, a publish runner with per-target fan-out, retry/backoff and idempotency, plus calendar/queue/history/inbox/activity projections — as a SQLite-backed sidecar Core spawns and proxies to on loopback. ZERO dependency on apps/core."
+repository = "https://github.com/amajorai/ryu"
+
+# Sidecar-ONLY: this crate is a process, not a library Core links. Unlike
+# `ryu-meetings`/`ryu-quests`/`ryu-recipes` (lib-plus-bin hybrids that ALSO compile
+# into Core as a path dependency), the shape here is `ryu-mail`'s: one `[[bin]]`,
+# every module bin-private via `mod` declarations in `main.rs`, and no `lib.rs`.
+# Core reaches this app exclusively through the generic ext-proxy
+# (`/api/ext/@ryu/social/*` + the `public_mount` at `/api/social`), so there is
+# nothing for Core to link and no `apps/core` dep in either direction.
+[[bin]]
+name = "ryu-social"
+path = "src/main.rs"
+
+# Versions are matched to apps/core/Cargo.toml (and to the sibling apps-store
+# backends) so this crate joining the root workspace via the `apps-store/*/backend`
+# member glob introduces NO version skew for any other job building the tree.
+[dependencies]
+ryu-sidecar-runtime = { path = "../crates/core/sidecar-runtime", version = "0.2.2" }
+# `full` is required, not optional: the bin needs the multi-thread runtime + macros
+# + net for `#[tokio::main]` / `TcpListener` / `axum::serve`, and the scheduler tick
+# needs `tokio::time` + `tokio::spawn`.
+tokio = { version = "1", features = ["full"] }
+axum = "0.7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+# Only used for `Utc::now().timestamp_millis()` (every timestamp in this app is an
+# INTEGER epoch-millis column) and for the ISO-8601 stamps the AT-Protocol publish
+# path will need — kept at Core's version so the shared lockfile does not move.
+chrono = { version = "0.4", features = ["serde"] }
+# IANA zone resolution for the timing recommender ONLY. Every stored instant is UTC
+# epoch-millis; the workspace's `settings.timezone` is a presentation concern — but
+# "which local hour did this post go out in" is a real DST question, and a fixed
+# UTC offset gets it wrong for half the year in most of the world. Same 0.10 line
+# apps/core already pins, so joining the workspace moves nobody's resolution.
+chrono-tz = "0.10"
+uuid = { version = "1", features = ["v4", "serde"] }
+rusqlite = { version = "0.40.0", features = ["bundled"] }
+# The provider layer talks to Composio / the AT-Protocol PDS+AppView / the Threads
+# Graph API over plain JSON. `multipart` is deliberately NOT enabled: the one
+# binary upload in the spec (`com.atproto.repo.uploadBlob`) is a raw-bytes POST with
+# the media's own content-type, not a multipart form.
+reqwest = { version = "0.12", features = ["json"] }
+# The provider trait is object-safe + async, so it needs the boxing shim.
+async-trait = "0.1"
+tracing = "0.1"
+# The OpenAPI document this sidecar serves at `/openapi.json`. Core fetches it on
+# this app's first Healthy edge and lowers each operation into an agent tool, so the
+# annotations in `api.rs` are the ONLY way Outpost's routes become callable by a
+# model — without them the app contributes zero tools despite serving 33 routes.
+# Pinned to the workspace-wide 5.5.0 line (there is no `utoipa-axum` here, which is
+# why `SocialApiDoc`'s `paths(...)` list is hand-written rather than router-derived).
+utoipa = { version = "5", features = ["axum_extras", "chrono", "uuid"] }
+# Sidecar-binary-only deps (data-dir resolution + logging), mirroring `ryu-mail` /
+# `ryu-teams`.
+dirs = "5"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+# The app-event emit client: raises the `contributes.hook_events` this app declares
+# in its manifest (`post.scheduled` / `post.published` / `post.failed` / …) so plugin
+# hooks and event-triggered workflows can react to a publish without this crate
+# knowing they exist. This is the ONE cross-crate dependency, and it does not
+# violate the zero-Core rule: it is a standalone crate holding only the OUTBOUND
+# half of the emit call (an HTTP POST to Core's `events.emit` capability), so it
+# links none of Core. Emitting is best-effort and no-ops when the process is not
+# Core-hosted, so it stays safe under this crate's own tests and any standalone run.
+#
+# The `version` alongside the `path` is mandatory, not decorative: the published
+# satellite tree has no sibling `crates/`, and the version is what lets it resolve
+# this dep from the registry instead.
+ryu-app-events = { path = "../crates/core/app-events", version = "0.2.2" }
