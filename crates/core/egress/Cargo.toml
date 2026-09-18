@@ -1,0 +1,15 @@
+[package]
+name = "ryu-egress"
+version = "0.4.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Shared SSRF-guarded outbound HTTP primitive for Ryu app satellites"
+repository = "https://github.com/amajorai/ryu"
+
+[dependencies]
+reqwest = { version = "0.12", features = ["json", "stream"] }
+tokio = { version = "1", features = ["rt", "time"] }
+url = "2"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt", "time"] }
